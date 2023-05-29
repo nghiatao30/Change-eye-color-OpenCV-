@@ -2,9 +2,6 @@ import cv2,sys
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-import imageio
-import gif2numpy as gf
-
 
 def createHistorgramOfEyeColor(img, centers, eyeRadius, test=False) :
         # covert image to gray-scale
@@ -18,8 +15,6 @@ def createHistorgramOfEyeColor(img, centers, eyeRadius, test=False) :
         # if test:
         #     cv2.imshow('test',gray)
         eyePixels = np.where(gray == 2)
-        # print("ep: ",eyePixels)
-        # print("gray: ",gray)
         # get histogram of colors for eye_pixlels
         hsv_image = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
         h, s, v  = cv2.split(hsv_image)
@@ -30,9 +25,9 @@ def createHistorgramOfEyeColor(img, centers, eyeRadius, test=False) :
 
 def changeHueOfHistogram(histogram, eyePixels, eye_pixel_hue, h, s, v, color, test = False) :
     largestBins = findLargestNConsecutiveBins(histogram,30)
-    # if test:
-        # print(histogram)
-        # print(largestBins)
+    if test:
+        print(histogram)
+        print(largestBins)
     if color == "brown" :
         destinationHue = np.concatenate((np.arange(170,180), np.arange(0,20)))
     elif color == "blue" :
@@ -75,103 +70,64 @@ def findLargestNConsecutiveBins(histogram,n) :
 # change eye color
 def changeEyeColor(img, eye_color, test=False) :
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
-    # tear = cv2.imread(r'TGMT\tear.png')
-    # tear = cv2.resize(tear, None ,fx=0.5,fy=0.5)
-    # print(tear.shape)
-
-    # face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
     eye_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_eye.xml')  
-    # faces = face_cascade.detectMultiScale(gray, 1.3, 2)
     centers = []
     eye_radius = 0
+
     eyes = eye_cascade.detectMultiScale(gray)
-    highereye = [99999999,99999999,99999999]
     for (ex,ey,ew,eh) in eyes:
-        # cv2.rectangle(img,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
+        #cv2.rectangle(roi_color,(ex,ey),(ex+ew,ey+eh),(0,255,0),2)
         center = ((2*ex + ew)//2, (2*ey + eh)//2)
-        eye_radius = min(ew,eh)//4
-        print(center,eye_radius)
-        if center[1] < highereye[1]:
-            highereye = center[0],center[1],eye_radius
+        eye_radius = int(ew//3.8)
         centers.append(center)
             
     histogram, eye_pixels, eye_pixel_hue, h, s, v = createHistorgramOfEyeColor(img, centers, eye_radius, test)
-    cimg = changeHueOfHistogram(histogram, eye_pixels, eye_pixel_hue, h, s, v, eye_color, test)
+    return changeHueOfHistogram(histogram, eye_pixels, eye_pixel_hue, h, s, v, eye_color, test)
 
 
 
-    #add gif effect
-    # mask = cv2.imread(r'TGMT\blue-eye3-removebg-preview.png', cv2.IMREAD_UNCHANGED)
-    # h1,w1,c1 = cimg.shape
-    # h3,w3,c3 = mask.shape
+video_cap = cv2.VideoCapture("TGMT\cute Blue eyes Girl Sub's for more videos #shorts #girl #hot #viral #buletinawani.mp4")
 
-    # h=min(h1,h3)
-    # w=min(w1,w3)
+frame_width = int(video_cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+frame_height = int(video_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+fps = video_cap.get(cv2.CAP_PROP_FPS)
 
-    #Thay đổi kích thước ảnh theo w,h:
-    fg = cv2.resize(cimg,(cimg.shape[1],cimg.shape[0]))
-    # mask = cv2.resize(mask,(w,h))
+# Create a video writer object
+output_path = "D:\Py\TGMT\output.mp4"
+fourcc = cv2.VideoWriter_fourcc(*'XVID')
+out = cv2.VideoWriter(output_path, fourcc, fps, (frame_width//2, frame_height//2))
+while video_cap.isOpened():
+        
+    success, img = video_cap.read()
+
+    if not success:
+        break
+
+    img = cv2.resize(img,None,fx=0.5,fy=0.5)
+
+    newImage = changeEyeColor(img, "brown", True)
+
+    out.write(newImage)     
     
-    ex,ey,er = highereye
-    # print(highereye)
+video_cap.release()
+out.release()
 
-    # ex = int(ex* (w / w1))
-    # ey = int(ey * (h / h1))
-    # er = int(er *((h/h1) + (w/w1)/2))
+video_cap2 = cv2.VideoCapture("D:\Py\TGMT\output.mp4")
 
-    url = ""
-    if eye_color == "green":
-        url = "file:///D:/DownHere/output-onlinegiftools%20(1).gif"
-    elif eye_color == "blue":
-        url = "file:///D:/Py/tearblackbgm.gif"
+while video_cap2.isOpened():
+    success, img = video_cap2.read()
 
-    frames = imageio.mimread(imageio.core.urlopen(url).read(), '.gif')
-    # frames,a,b = gf.convert("TGMT/new tear.gif")
-    # frames = [cv2.resize(frame,None,fx=0.1,fy=0.1) for frame in frames]
-    # ht,wt,channels = frames[0].shape
+    if not success:
+        break
 
-    fg_h, fg_w, fg_c = fg.shape
-    # bg_h, bg_w, bg_c = frames[0].shape
-    # top = int(abs(bg_h-fg_h)/2)
-    # left = int(abs(bg_w-fg_w)/2)
-    # bgs = [frame[top: top + fg_h, left:left + fg_w, 0:3] for frame in frames]
-    bgs = [cv2.resize(frame,(fg_w,fg_h))[:,:,0:3] for frame in frames]
-    bgs_h,bgs_w,bgs_c = bgs[0].shape
-    # print(bgs[0].shape)
-    # print(cimg.shape)
+    cv2.imshow("new",img)
+    # Close the window when 'q' is pressed
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
-    results = []
-    tears= []
-    # alpha = 0.5
+video_cap2.release()
+cv2.destroyAllWindows()
 
-    for i in range(len(bgs)):
-        result = fg.copy()
-        # result[mask[:,:,3] != 0]   =  result[mask[:,:,3] != 0]
-        # bgs[i][mask[:,:,3] == 0] = 0
-        # bgs[i][mask[:,:,3] != 0] = 0.5*bgs[i][mask[:,:,3] != 0]
-        result = cv2.cvtColor(result,cv2.COLOR_BGR2RGB)
-        result[ey + er:,:,:][bgs[i][:bgs_h - (ey + er),:,:] != 0] = bgs[i][:bgs_h - (ey + er),:,:][bgs[i][:bgs_h - (ey + er),:,:] != 0] # decrease y axis of gif effect but not work
-        # result[bgs[i]!= 0] = bgs[i][bgs[i] != 0]
-
-        results.append(result)
-        tears.append(bgs[i])
-
-
-
-    imageio.mimsave('eyeproject.gif', results)
-    imageio.mimsave('tearpart.gif', tears)
-    return cimg
-
-img = cv2.imread("TGMT/Eyes-Girls-DP-Thumbnail.jpg")  
-img = cv2.resize(img,None,fx=0.4,fy=0.4)
-
-newImage = changeEyeColor(img, "green", True)
-# img = cv2.resize(img,None,fx=2,fy=2)
-
-cv2.imshow('imag',img)
-cv2.imshow('newImg',newImage)
-cv2.waitKey(0)
 
 
 
